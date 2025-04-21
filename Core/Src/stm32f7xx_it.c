@@ -59,16 +59,18 @@ extern I2C_HandleTypeDef hi2c1;
 extern I2C_HandleTypeDef hi2c2;
 extern UART_HandleTypeDef huart2;
 /* USER CODE BEGIN EV */
+extern uint8_t uart2_flag_h; // Flag when UART encounters an interrupt event
+extern uint8_t i2c2_flag_h;
+    /* USER CODE END EV */
 
-/* USER CODE END EV */
-
-/******************************************************************************/
-/*           Cortex-M7 Processor Interruption and Exception Handlers          */
-/******************************************************************************/
-/**
-  * @brief This function handles Non maskable interrupt.
-  */
-void NMI_Handler(void)
+    /******************************************************************************/
+    /*           Cortex-M7 Processor Interruption and Exception Handlers          */
+    /******************************************************************************/
+    /**
+     * @brief This function handles Non maskable interrupt.
+     */
+    void
+    NMI_Handler(void)
 {
   /* USER CODE BEGIN NonMaskableInt_IRQn 0 */
 
@@ -224,7 +226,7 @@ void I2C2_EV_IRQHandler(void)
   /* USER CODE END I2C2_EV_IRQn 0 */
   HAL_I2C_EV_IRQHandler(&hi2c2);
   /* USER CODE BEGIN I2C2_EV_IRQn 1 */
-
+  i2c2_flag_h = 1;
   /* USER CODE END I2C2_EV_IRQn 1 */
 }
 
@@ -238,7 +240,7 @@ void USART2_IRQHandler(void)
   /* USER CODE END USART2_IRQn 0 */
   HAL_UART_IRQHandler(&huart2);
   /* USER CODE BEGIN USART2_IRQn 1 */
-
+  uart2_flag_h = 1;
   /* USER CODE END USART2_IRQn 1 */
 }
 
