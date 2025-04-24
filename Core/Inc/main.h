@@ -113,6 +113,23 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN Private defines */
 
+#define UART_BUFFER_SIZE 100
+#define I2C_BUFFER_SIZE 100
+
+extern uint8_t data_rsv1[I2C_BUFFER_SIZE + 2];
+extern uint8_t uart_buffer[UART_BUFFER_SIZE + 2];
+extern uint8_t i2c2_buffer[I2C_BUFFER_SIZE + 2];
+extern uint8_t urat_data_print[UART_BUFFER_SIZE + 20];
+
+extern uint8_t uart2_flag_calback;
+extern uint8_t uart2_flag_h;
+extern uint8_t i2c2_flag_h;
+
+extern uint8_t txBufStatic[100];
+
+extern int i;
+extern void HAL_I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c);
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
