@@ -8,11 +8,13 @@ extern "C"
 
 #include <stdint.h>
 
-uint16_t crc16(uint8_t *data, uint16_t length);
+    uint16_t crc16(const uint8_t *data, uint16_t length);
 
-void crc16_update_buffer(uint16_t crc, uint8_t *data, uint16_t length);
-uint16_t crc16_extract_crc(uint8_t *data, uint16_t length);
+    void crc16_update_buffer(uint16_t crc, uint8_t *data, uint16_t length);
+    uint16_t crc16_extract_crc(uint8_t *data, uint16_t length);
+    void crc16_print_buffer(uint8_t *data, uint16_t length);
 
+    
 #ifdef __cplusplus
 }
 #endif
