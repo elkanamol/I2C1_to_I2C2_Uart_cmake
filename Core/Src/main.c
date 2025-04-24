@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <string.h>
+#include "crc.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -38,7 +39,7 @@
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 #define UART_BUFFER_SIZE 100
-#define I2C_BUFFER_SIZE 10
+#define I2C_BUFFER_SIZE 100
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -50,11 +51,31 @@ UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
-uint8_t data_rsv1[I2C_BUFFER_SIZE] = {0};
-uint8_t uart_buffer[UART_BUFFER_SIZE] = {0};
+uint8_t data_rsv1[I2C_BUFFER_SIZE + 2] = {0};
+uint8_t uart_buffer[UART_BUFFER_SIZE + 2] = {0};
+uint8_t i2c2_buffer[I2C_BUFFER_SIZE + 2] = {0};
+uint8_t urat_data_print[UART_BUFFER_SIZE + 20] = {"UART2 data test \r\n"};
+
 uint8_t uart2_flag_calback = 0;
 uint8_t uart2_flag_h = 0;
 uint8_t i2c2_flag_h = 0;
+
+uint8_t txBufStatic[100] = {
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+    0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
+    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+    0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F,
+    0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27,
+    0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F,
+    0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
+    0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F,
+    0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,
+    0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F,
+    0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57,
+    0x58, 0x59, 0x5A, 0x5B, 0x5C, 0x5D, 0x5E, 0x5F,
+    0x60, 0x61, 0x62, 0x63};
+
+int i = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -65,6 +86,7 @@ static void MX_I2C2_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_USART3_UART_Init(void);
 /* USER CODE BEGIN PFP */
+void main_loop(void);
 
 /* USER CODE END PFP */
 
@@ -107,9 +129,8 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
-  int i = 0;
   printf("Starting program\r\n");
-  if (HAL_I2C_Slave_Receive_IT(&hi2c2, data_rsv1, 1) != HAL_OK)
+  if (HAL_I2C_Slave_Receive_IT(&hi2c2, data_rsv1, 102) != HAL_OK)
   {
     printf("Error setting up I2C slave receive IT\r\n");
     Error_Handler();
@@ -127,56 +148,49 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    HAL_StatusTypeDef status;
-    if (uart2_flag_calback)
-    {
-      printf("callback flag up [%s]\n\r", uart_buffer);
-      uart2_flag_calback = 0; // setting flag back to 0
-      status = HAL_I2C_Master_Transmit(&hi2c1, 0x22 << 1, uart_buffer, 1, 1000);
-      if (status != HAL_OK)
-      {
-        printf("Error sending data over I2C %d: \r\n", status);
-        // Error_Handler();
-      }
-      HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
-      snprintf((char *)uart_buffer, UART_BUFFER_SIZE, "get value %s  \n\r", data_rsv1);
-      HAL_UART_Transmit(&huart2, data_rsv1, strlen((char *)data_rsv1), 100);
-      if (i2c2_flag_h)
-      {
-        printf("[uart2_flag_calback] I2C data: %s\r\n", (char *)data_rsv1);
-        i2c2_flag_h = 0;
-        memset(data_rsv1, 0, I2C_BUFFER_SIZE);
-      }
-      HAL_UART_Receive_IT(&huart2, uart_buffer, 1);
-      memset(uart_buffer, 0, UART_BUFFER_SIZE);
-    }
-    if (uart2_flag_h) // Check if UART encountered an interrupt event
-    {
-      printf("UART_DEBUG_IRQHandler flag UP\n\r");
-      printf("UART_DEBUG.RxXferCount [%d]\n\r", huart2.RxXferCount); // print the transfer count
-      status = HAL_I2C_Master_Transmit(&hi2c1, 0x22 << 1, uart_buffer, 1, 1000);
-      if (status != HAL_OK)
-      {
-        printf("Error sending data over I2C %d: \r\n", status);
-        // Error_Handler();
-      }
-      HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
-      snprintf((char *)uart_buffer, UART_BUFFER_SIZE, "get value %s  \n\r", data_rsv1);
-      HAL_UART_Transmit(&huart2, data_rsv1, strlen((char *)data_rsv1), 100);
-      printf("[uart2_flag_h] I2C data: %s\r\n", (char *)data_rsv1);
-      uart2_flag_h = 0; // setting flag back to 0
-      if (i2c2_flag_h)
-      {
-        printf("[uart2_flag_h] I2C data: %s\r\n", (char *)data_rsv1);
-        i2c2_flag_h = 0;
-        memset(data_rsv1, 0, I2C_BUFFER_SIZE);
-      }
-      HAL_UART_Receive_IT(&huart2, uart_buffer, 1);
-      memset(uart_buffer, 0, UART_BUFFER_SIZE);
-    }
-    printf("finish while #%d\r\n", i++);
-    HAL_UART_Transmit(&huart2, "data_rsv1\r\n", 12, 100);
-    HAL_Delay(1000);
+    // HAL_StatusTypeDef status;
+    // if (uart2_flag_calback)
+    // {
+
+    //   printf("callback flag up [%s]\n\r", uart_buffer);
+    //   uint16_t len = strlen((char *)uart_buffer);
+    //   uint16_t tx_crc = 0;
+    //   if (len > 0)
+    //   {
+    //     memcpy(i2c2_buffer, uart_buffer, len);
+    //     tx_crc = crc16(i2c2_buffer, len);
+    //     crc16_update_buffer(tx_crc, i2c2_buffer, len);
+    //     printf("CRC: %d\r\n", tx_crc);
+    //   }
+    //   uart2_flag_calback = 0; // setting flag back to 0
+    //   status = HAL_I2C_Master_Transmit(&hi2c1, 68, i2c2_buffer, (len + 2), 1000);
+    //   if (status != HAL_OK)
+    //   {
+    //     printf("Error sending data over I2C %d: \r\n", status);
+    //   }
+
+    //   HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+    //   // snprintf((char *)uart_buffer, UART_BUFFER_SIZE, "get value %s  \n\r", data_rsv1);
+    //   HAL_UART_Transmit(&huart2, data_rsv1, strlen((char *)data_rsv1), 100);
+    //   if (i2c2_flag_h)
+    //   {
+    //     uint16_t crc_recived = crc16_extract_crc(data_rsv1, strlen((char *)data_rsv1));
+    //     printf("CRC recived: %d\r\n", crc_recived);
+    //     printf("The crc is %s\r\n", crc_recived == tx_crc ? "OK" : "NOK");
+    //     printf("[uart2_flag_calback] I2C data: %s\r\n", (char *)data_rsv1);
+    //     i2c2_flag_h = 0;
+    //     memset(data_rsv1, 0, I2C_BUFFER_SIZE);
+    //   }
+    //   HAL_UART_Receive_IT(&huart2, uart_buffer, UART_BUFFER_SIZE + 2);
+    //   sprintf(urat_data_print, "UART2: %s\r\n", (char *)uart_buffer);
+    //   HAL_UART_Transmit(&huart2, urat_data_print, strlen(urat_data_print), 100);
+    //   memset(uart_buffer, 0, UART_BUFFER_SIZE + 2);
+    // }
+
+    // printf("finish while #%d\r\n", i++);
+    // HAL_Delay(1000);
+    // HAL_UART_Transmit(&huart2, urat_data_print, strlen(urat_data_print), 100);
+    main_loop();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -505,17 +519,25 @@ static void MX_GPIO_Init(void)
 /* USER CODE END MX_GPIO_Init_2 */
 }
 
-/* USER CODE BEGIN 4 */
+
 void HAL_I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
-  if (hi2c->Instance == I2C2)
+  // Update to print the full received data length
+  printf("Data received from I2C master\r\n");
+
+  // Print the last few bytes including CRC for debugging
+  printf("Last bytes including CRC: ");
+  uint16_t total_len = sizeof(txBufStatic) + 2;
+  for (int i = total_len - 5; i < total_len; i++)
   {
-    printf("Data received from I2C master: [%c]\r\n", data_rsv1[0]);
-    // printf("data received from I2C master [%s]\r\n", data_rsv1);
-    i2c2_flag_h = 1;
-    // Re-enable interrupt for next reception
-    HAL_I2C_Slave_Receive_IT(&hi2c2, data_rsv1, 1);
+    printf("%02X ", data_rsv1[i]);
   }
+  printf("\r\n");
+
+  i2c2_flag_h = 1;
+
+  // Re-enable with the correct buffer size
+  HAL_I2C_Slave_Receive_IT(&hi2c2, data_rsv1, total_len);
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
@@ -561,6 +583,68 @@ int _read(int file, char *ptr, int len)
 
   return 1;
 }
+
+void main_loop(void)
+{
+  HAL_StatusTypeDef status;
+  uint16_t len = 0;
+  len = sizeof(txBufStatic);
+  uint16_t tx_crc = 0;
+
+  memcpy(i2c2_buffer, txBufStatic, len);
+  tx_crc = crc16(i2c2_buffer, len);
+  crc16_update_buffer(tx_crc, i2c2_buffer, len);
+  printf("CRC: %d\r\n", tx_crc);
+  uint16_t total_len = len + 2;
+  status = HAL_I2C_Master_Transmit(&hi2c1, 68, i2c2_buffer, total_len, 1000);
+  if (status != HAL_OK)
+  {
+    printf("Error sending data over I2C %d: \r\n", status);
+  }
+
+  // Check specific error codes
+  if (status != HAL_OK)
+  {
+    printf("Error sending data over I2C. Status: %d\r\n", status);
+  }
+  if (status == HAL_ERROR)
+    printf("HAL_ERROR: Check for bus errors\r\n");
+  else if (status == HAL_BUSY)
+    printf("HAL_BUSY: I2C bus or peripheral is busy\r\n");
+  else if (status == HAL_TIMEOUT)
+    printf("HAL_TIMEOUT: Timeout waiting for I2C operation\r\n");
+  HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+  // snprintf((char *)uart_buffer, UART_BUFFER_SIZE, "get value %s  \n\r", data_rsv1);
+  HAL_UART_Transmit(&huart2, (uint8_t *)"data sent to I2c2\r\n", 20, 100);
+  printf("I2C data: %s\r\n", (char *)i2c2_buffer);
+  if (i2c2_flag_h)
+  {
+    uint16_t crc_recived = crc16_extract_crc(data_rsv1, sizeof(data_rsv1));
+    printf("CRC recived: %d\r\n", crc_recived);
+    printf("The crc is %s\r\n", crc_recived == tx_crc ? "OK" : "NOK");
+    printf("[uart2_flag_calback] I2C data: %d\r\n", data_rsv1[i]);
+    for (int i = 0; i < 102; i++)
+    {
+      printf("%02x ", data_rsv1[i]);
+    }
+    printf("\r\n[uart2_flag_calback] i2c2_buffer data: %d\r\n", data_rsv1[i]);
+    for (int i = 0; i < 102; i++)
+    {
+      printf("%02x ", i2c2_buffer[i]);
+    }
+    printf("\r\n");
+    i2c2_flag_h = 0;
+    memset(data_rsv1, 0, I2C_BUFFER_SIZE + 1);
+  }
+  // HAL_UART_Receive_IT(&huart2, uart_buffer, 1);
+  // sprintf((char*)urat_data_print, "UART2: %s\r\n", (char *)uart_buffer);
+  // HAL_UART_Transmit(&huart2, urat_data_print, (uint16_t)strlen(urat_data_print), 100);
+  // memset(uart_buffer, 0, UART_BUFFER_SIZE + 2);
+  printf("finish while #%d\r\n", i++);
+  HAL_Delay(1000);
+  // HAL_UART_Transmit(&huart2, urat_data_print, (uint16_t)strlen(urat_data_print), 100);
+}
+
 /* USER CODE END 4 */
 
 /**
@@ -574,6 +658,8 @@ void Error_Handler(void)
   __disable_irq();
   while (1)
   {
+    HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+    HAL_Delay(500);
   }
   /* USER CODE END Error_Handler_Debug */
 }
