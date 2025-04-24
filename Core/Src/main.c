@@ -62,7 +62,7 @@ uint8_t uart2_flag_calback = 0;
 uint8_t uart2_flag_h = 0;
 uint8_t i2c2_flag_h = 0;
 
-uint8_t txBufStatic[100] = {
+uint8_t txBufDynamic[100] = {
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
     0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
     0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
@@ -139,7 +139,7 @@ int main(void)
     Error_Handler();
   }
 
-  if (HAL_UART_Receive_IT(&huart2, uart_buffer, 1) != HAL_OK)
+  if (HAL_UART_Receive_IT(&huart2, uart_buffer, 10) != HAL_OK)
   {
     printf("Error setting up UART receive IT\r\n");
     Error_Handler();
@@ -151,6 +151,19 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
+    uint8_t result = check_uart_buffer(uart_buffer, &uart2_flag_calback, UART_BUFFER_SIZE);
+    if (result == 0)
+    {
+      printf("UART buffer transfer complete\r\n");
+      result = check_i2c2_buffer(data_rsv1, &i2c2_flag_h, I2C_BUFFER_SIZE);
+      if (result == 0)
+      {
+        printf("I2C buffer transfer complete\r\n");
+      }
+    }
+    HAL_Delay(1000);
+
     // HAL_StatusTypeDef status;
     // if (uart2_flag_calback)
     // {
@@ -193,7 +206,10 @@ int main(void)
     // printf("finish while #%d\r\n", i++);
     // HAL_Delay(1000);
     // HAL_UART_Transmit(&huart2, urat_data_print, strlen(urat_data_print), 100);
-    main_loop();
+    
+    
+    // main_loop();
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -528,10 +544,10 @@ void main_loop(void)
 {
   HAL_StatusTypeDef status;
   uint16_t len = 0;
-  len = sizeof(txBufStatic);
+  len = sizeof(txBufDynamic);
   uint16_t tx_crc = 0;
 
-  memcpy(i2c2_buffer, txBufStatic, len);
+  memcpy(i2c2_buffer, txBufDynamic, len);
   tx_crc = crc16(i2c2_buffer, len);
   crc16_update_buffer(tx_crc, i2c2_buffer, len);
   printf("CRC: %d\r\n", tx_crc);

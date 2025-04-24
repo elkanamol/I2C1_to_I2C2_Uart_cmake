@@ -125,7 +125,7 @@ extern uint8_t uart2_flag_calback;
 extern uint8_t uart2_flag_h;
 extern uint8_t i2c2_flag_h;
 
-extern uint8_t txBufStatic[100];
+extern uint8_t txBufDynamic[100];
 
 extern int i;
 extern void HAL_I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c);
