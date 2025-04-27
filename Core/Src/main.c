@@ -151,7 +151,6 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
     uint8_t result = check_uart_buffer(uart_buffer, &uart2_flag_calback, UART_BUFFER_SIZE);
     if (result == 0)
     {
@@ -160,9 +159,10 @@ int main(void)
       if (result == 0)
       {
         printf("I2C buffer transfer complete\r\n");
+        HAL_UART_Transmit(&huart2, (uint8_t *)"The data received OK\r\n", 22, 1000);
       }
     }
-    HAL_Delay(1000);
+    HAL_Delay(1);
 
     /* USER CODE END WHILE */
 

@@ -128,7 +128,7 @@ uint16_t get_uart_buffer_len(const uint8_t *buffer, uint16_t len)
 uint8_t check_uart_buffer(uint8_t *uart_buffer, uint8_t *uart2_flag_calback, uint16_t len)
 {
     HAL_StatusTypeDef status;
-    uint8_t retval = STATUS_OK;
+    uint8_t retval = STATUS_NO_DATA;
     uint8_t txBuf[UART_BUFFER_SIZE];
     if (*uart2_flag_calback)
     {
@@ -181,7 +181,7 @@ uint8_t check_uart_buffer(uint8_t *uart_buffer, uint8_t *uart2_flag_calback, uin
  */
 uint8_t check_i2c2_buffer(uint8_t *i2c_buffer, uint8_t *i2c2_flag_h, uint16_t len)
 {
-    uint8_t retval = 0;
+    uint8_t retval = STATUS_NO_DATA;
     if (*i2c2_flag_h)
     {
         uint16_t len_buffer = get_uart_buffer_len(i2c_buffer, len);
