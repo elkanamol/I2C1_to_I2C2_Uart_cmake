@@ -132,6 +132,9 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
+
+  // initialize interrupts for I2C2 and UART2
+  
   printf("Starting program\r\n");
   if (HAL_I2C_Slave_Receive_IT(&hi2c2, data_rsv1, 102) != HAL_OK)
   {

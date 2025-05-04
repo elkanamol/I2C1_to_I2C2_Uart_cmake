@@ -26,7 +26,7 @@ extern UART_HandleTypeDef huart3;
  */
 void HAL_I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
-    if (hi2c->Instance == I2C2)
+    if (hi2c->Instance == I2C2) // only if I2C2 is the instance that triggered the callback.
     {
         // Update to print the full received data length
         printf("Data received from I2C master\r\n");
@@ -34,12 +34,12 @@ void HAL_I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c)
         // Print the last few bytes including CRC for debugging
         printf("Last bytes including CRC: ");
         uint16_t total_len = get_uart_buffer_len(data_rsv1, I2C_BUFFER_SIZE);
+
+        // print only the last 5 bytes including CRC to reduce IRQ overhead.
         crc16_print_buffer((data_rsv1 + total_len - 5), 5);
 
         i2c2_flag_h = 1;
 
-        // Re-enable with the correct buffer size
-        // HAL_I2C_Slave_Receive_IT(&hi2c2, data_rsv1, total_len);
     }
 }
 
@@ -56,24 +56,25 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     if (huart->Instance == USART2)
     {
         uart2_flag_calback = 1;
-        HAL_UART_Receive_IT(&huart2, uart_buffer, 10);
+        HAL_UART_Receive_IT(&huart2, uart_buffer, 10);                          // only more then 10 bytes will trigger IRQ, or timeout.
     }
 }
 
-// printf
+// printf implementation for UART3.
 int __io_putchar(int ch)
 {
     HAL_UART_Transmit(&huart3, (uint8_t *)&ch, 1, 0xFFFF);
     return ch;
 }
 
+// printf implementation for UART3.
 int _write(int file, char *ptr, int len)
 {
     HAL_UART_Transmit(&huart3, (uint8_t *)ptr, len, 0xFFFF);
     return len;
 }
 
-// scanf
+// scanf implementation for UART3. (not used in this code)
 int _read(int file, char *ptr, int len)
 {
     int ch = 0;
@@ -128,7 +129,7 @@ uint16_t get_uart_buffer_len(const uint8_t *buffer, uint16_t len)
 uint8_t check_uart_buffer(uint8_t *uart_buffer, uint8_t *uart2_flag_calback, uint16_t len)
 {
     HAL_StatusTypeDef status;
-    uint8_t retval = STATUS_NO_DATA;
+    uint8_t retval = STATUS_NO_DATA;                                            // return only if not data in buffer
     uint8_t txBuf[UART_BUFFER_SIZE];
     if (*uart2_flag_calback)
     {
@@ -140,7 +141,7 @@ uint8_t check_uart_buffer(uint8_t *uart_buffer, uint8_t *uart2_flag_calback, uin
             crc16_update_buffer(tx_crc, txBuf, len_buffer);
             printf("[check_uart_buffer] CRC: %02X\r\n", tx_crc);
             crc16_print_buffer(txBuf, len_buffer);
-            memset(data_rsv1, 0, I2C_BUFFER_SIZE + 2);
+            memset(data_rsv1, 0, I2C_BUFFER_SIZE + 2);                          // Clear the buffer + 2 bytes for CRC
             HAL_I2C_Slave_Receive_IT(&hi2c2, data_rsv1, len_buffer + 2);
 
             status = HAL_I2C_Master_Transmit(&hi2c1, 68, txBuf, len_buffer + 2, 1000);
@@ -186,12 +187,14 @@ uint8_t check_i2c2_buffer(uint8_t *i2c_buffer, uint8_t *i2c2_flag_h, uint16_t le
     {
         uint16_t len_buffer = get_uart_buffer_len(i2c_buffer, len);
         HAL_UART_Transmit(&huart2, (uint8_t*)"\r\n", 2, 1000);
-        HAL_UART_Transmit(&huart2, i2c_buffer, len_buffer - 2, 1000);
+        HAL_UART_Transmit(&huart2, i2c_buffer, len_buffer - 2, 1000);           // withot CRC
         HAL_UART_Transmit(&huart2, (uint8_t *)"\r\n", 2, 1000);
-        crc16_print_buffer(i2c_buffer, len_buffer);
-        uint16_t rx_crc = crc16(i2c_buffer, len_buffer - 2);
-        uint16_t crc_recived = crc16_extract_crc(data_rsv1, len_buffer);
-        if (crc_recived == rx_crc)
+        crc16_print_buffer(i2c_buffer, len_buffer);                             // complete I2C buffer
+        uint16_t rx_crc = crc16(i2c_buffer, len_buffer - 2);                    // calculate CRC by data only
+        uint16_t crc_recived = crc16_extract_crc(data_rsv1, len_buffer);        // extract CRC from received data
+        
+        // compare calculated CRC from data with CRC from received data (last 2 bytes)
+        if (crc_recived == rx_crc)                                              
         {
             printf("[check_i2c2_buffer] CRC recived: %02X\r\n", crc_recived);
             printf("[check_i2c2_buffer] The crc is %s\r\n", crc_recived == rx_crc ? "OK" : "NOK");
@@ -200,14 +203,14 @@ uint8_t check_i2c2_buffer(uint8_t *i2c_buffer, uint8_t *i2c2_flag_h, uint16_t le
             memset(i2c_buffer, 0, I2C_BUFFER_SIZE + 1);
             retval = STATUS_OK;
         }
-        else
+        else                                                                    // CRC is not correct
         {
             printf("[check_i2c2_buffer] CRC NOK: %d\r\n", rx_crc);
             printf("[check_i2c2_buffer] The crc is %s\r\n", crc_recived == rx_crc ? "OK" : "NOK");
             printf("[check_i2c2_buffer] I2C data: #%d\r\n", i);
             crc16_print_buffer(i2c_buffer, len_buffer);
             memset(i2c_buffer, 0, I2C_BUFFER_SIZE + 1);
-            retval = STATUS_ERROR;
+            retval = STATUS_ERROR;                                              // return error status (1)
         }
         *i2c2_flag_h = 0;
     }

@@ -18,7 +18,7 @@ extern "C"
     uint8_t check_i2c2_buffer(uint8_t *i2c_buffer, uint8_t *i2c2_flag_h, uint16_t len);
     uint8_t check_uart_buffer(uint8_t *uart_buffer, uint8_t *uart2_flag_calback, uint16_t len);
 
-    // weak functions
+    // replace the HAL waek functions by own implemetation
     void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
     void HAL_I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c);
 
