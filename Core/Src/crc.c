@@ -18,20 +18,20 @@
  */
 uint16_t crc16(const uint8_t *data, uint16_t length)
 {
-    uint16_t crc = CRC16_CCITT_INIT_VALUE;
+    uint16_t crc = CRC16_CCITT_INIT_VALUE;                  // start CRC with 0xFFFF
     
     for (uint16_t i = 0; i < length; i++)
     {
-        crc ^= (uint16_t)data[i] << 8;
+        crc ^= (uint16_t)data[i] << 8;                      // XOR with the current byte, shifted left by 8 bits
         for(uint8_t bit = 0; bit < 8; bit++)
         {
-            if (crc & 0x8000)
+            if (crc & 0x8000)                               // if the most significant bit is set
             {
-                crc = (crc << 1) ^ CRC16_CCITT_POLYNOMIAL;
+                crc = (crc << 1) ^ CRC16_CCITT_POLYNOMIAL;  // shift left and XOR with the polynomial
             }
             else
             {
-                crc <<= 1;
+                crc <<= 1;                                  // only shift left without XOR
             }
         }
     }
@@ -53,8 +53,8 @@ uint16_t crc16(const uint8_t *data, uint16_t length)
  */
 void crc16_update_buffer(uint16_t crc, uint8_t *data, uint16_t length)
 {
-    data[length] = (uint8_t)(crc  >> 8);
-    data[length + 1] = (uint8_t)(crc & 0xFF);
+    data[length] = (uint8_t)(crc  >> 8);        // shift right by 8 bits and store in the buffer
+    data[length + 1] = (uint8_t)(crc & 0xFF);   // store the least significant byte in the buffer
 }
 
 
